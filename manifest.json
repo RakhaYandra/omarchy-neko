@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "rakha.neko",
+  "name": "Neko",
+  "version": "0.1.0",
+  "author": "RakhaYandra",
+  "description": "Bar widget + panel for Neko, the little OpenCode companion for Linux",
+  "kinds": [
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "barWidget": "NekoWidget.qml"
+  },
+  "barWidget": {
+    "displayName": "Neko",
+    "description": "Shows OpenCode session state; click to open the companion panel",
+    "category": "System",
+    "allowMultiple": false
+  }
+}
