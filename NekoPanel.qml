@@ -145,7 +145,7 @@ Panel {
     centerOnBar: true
     focusTarget: keyCatcher
     contentWidth: panel.fittedContentWidth(Style.space(340))
-    contentHeight: panel.fittedContentHeight(content.implicitHeight)
+    contentHeight: panel.fittedContentHeight(contentColumn.implicitHeight + 20)
 
     PanelKeyCatcher {
       id: keyCatcher
@@ -153,11 +153,23 @@ Panel {
       onCloseRequested: root.close()
     }
 
-    Column {
-      id: content
+    // Flickable hosts the column (clock shape): the column must size from
+    // its children, never anchors.fill (that collapses to zero height
+    // against the fitted popup and renders nothing).
+    Flickable {
       anchors.fill: parent
-      anchors.margins: 10
-      spacing: 8
+      contentWidth: contentColumn.width
+      contentHeight: contentColumn.implicitHeight
+      clip: true
+      boundsBehavior: Flickable.StopAtBounds
+      interactive: contentHeight > height || contentWidth > width
+
+      Column {
+        id: contentColumn
+        width: parent.width - 20
+        x: 10
+        y: 10
+        spacing: 8
 
     Row {
       width: parent.width
@@ -184,7 +196,7 @@ Panel {
       model: root.pendings
       delegate: Rectangle {
         property string reqId: modelData.requestId
-        width: content.width
+        width: contentColumn.width
         height: cardCol.implicitHeight + 16
         radius: 8
         color: "rgba(255,178,36,0.08)"
@@ -216,7 +228,7 @@ Panel {
             Repeater {
               model: [["once", "Allow", "#1f6feb"], ["always", "Always", "rgba(255,255,255,0.08)"], ["deny", "Deny", "rgba(248,81,73,0.25)"]]
               delegate: Rectangle {
-                width: (content.width - 28) / 3
+                width: (contentColumn.width - 28) / 3
                 height: 28
                 radius: 6
                 color: modelData[2]
@@ -255,7 +267,7 @@ Panel {
         property var item: (modelData.questions && modelData.questions.length > 0) ? modelData.questions[0] : null
         property int extra: (modelData.questions ? modelData.questions.length : 0) - 1
         property var picked: []
-        width: content.width
+        width: contentColumn.width
         height: qCol.implicitHeight + 16
         radius: 8
         color: "rgba(88,166,255,0.08)"
@@ -304,7 +316,7 @@ Panel {
             model: (item !== null && extra <= 0 && Array.isArray(item.options)) ? item.options : []
             delegate: Rectangle {
               property string optLabel: modelData.label
-              width: content.width
+              width: contentColumn.width
               height: 26
               radius: 6
               color: picked.indexOf(optLabel) >= 0 ? "#1f6feb" : "rgba(255,255,255,0.06)"
@@ -337,7 +349,7 @@ Panel {
             visible: item !== null && extra <= 0
             Rectangle {
               visible: item !== null && item.multiple === true
-              width: (content.width - 14) / 2
+              width: (contentColumn.width - 14) / 2
               height: 28
               radius: 6
               color: "#1f6feb"
@@ -357,7 +369,7 @@ Panel {
               }
             }
             Rectangle {
-              width: (item !== null && item.multiple === true) ? (content.width - 14) / 2 : content.width - 12
+              width: (item !== null && item.multiple === true) ? (contentColumn.width - 14) / 2 : contentColumn.width - 12
               height: 28
               radius: 6
               color: "rgba(248,81,73,0.25)"
@@ -398,7 +410,7 @@ Panel {
     Repeater {
       model: root.sessions
       delegate: Row {
-        width: content.width
+        width: contentColumn.width
         spacing: 8
         Text {
           text: "●"
@@ -421,4 +433,5 @@ Panel {
     }
   }
   }
+}
 }
