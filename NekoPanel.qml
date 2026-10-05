@@ -110,9 +110,6 @@ Panel {
     replyProc.running = true;
   }
 
-  implicitWidth: 320
-  implicitHeight: content.implicitHeight + 20
-
   FileView {
     id: statusFile
     path: root.statusPath()
@@ -137,11 +134,30 @@ Panel {
     }
   }
 
-  Column {
-    id: content
-    anchors.fill: parent
-    anchors.margins: 10
-    spacing: 8
+  // Popout window (clock/weather shape): the Panel base above only owns
+  // lifecycle; this KeyboardPanel is the visible popup anchored to the bar.
+  KeyboardPanel {
+    id: panel
+    anchorItem: root.anchorItem
+    owner: root.barIdentity
+    bar: root.bar
+    open: root.opened
+    centerOnBar: true
+    focusTarget: keyCatcher
+    contentWidth: panel.fittedContentWidth(Style.space(340))
+    contentHeight: panel.fittedContentHeight(content.implicitHeight)
+
+    PanelKeyCatcher {
+      id: keyCatcher
+      anchors.fill: parent
+      onCloseRequested: root.close()
+    }
+
+    Column {
+      id: content
+      anchors.fill: parent
+      anchors.margins: 10
+      spacing: 8
 
     Row {
       width: parent.width
@@ -403,5 +419,6 @@ Panel {
         }
       }
     }
+  }
   }
 }
