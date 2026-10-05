@@ -12,15 +12,16 @@ BarWidget {
   id: root
   moduleName: "rakha.neko"
 
-  // ---- live model (status.json v1: sessions[] + pending[]) ----
+  // ---- live model (status.json v1: sessions[] + pending[] + questions[]) ----
   property var sessions: []
   property var pendings: []
+  property var questions: []
   property bool backendAlive: false
   property bool hadPending: false
 
-  readonly property int pendingCount: pendings.length
+  readonly property int waitingCount: pendings.length + questions.length
   readonly property string worst: {
-    if (pendings.length > 0) return "waiting";
+    if (waitingCount > 0) return "waiting";
     var rank = { error: 5, waiting_permission: 5, working: 4, tool_running: 4, completed: 2, idle: 1, disconnected: 0 };
     var best = "idle";
     var bestRank = -1;
@@ -53,7 +54,7 @@ BarWidget {
   }
   readonly property string tooltipText: {
     if (!backendAlive) return "Neko — app not running";
-    if (pendings.length > 0) return "Neko — " + pendings.length + " permission(s) waiting";
+    if (waitingCount > 0) return "Neko — " + waitingCount + " request(s) waiting";
     if (sessions.length === 0) return "Neko — waiting for OpenCode";
     return "Neko — " + sessions.length + " session(s)";
   }
@@ -64,6 +65,7 @@ BarWidget {
       if (v && Array.isArray(v.sessions)) {
         sessions = v.sessions;
         pendings = Array.isArray(v.pending) ? v.pending : [];
+        questions = Array.isArray(v.questions) ? v.questions : [];
         backendAlive = true;
         return;
       }
@@ -74,6 +76,7 @@ BarWidget {
   function clearStatus() {
     sessions = [];
     pendings = [];
+    questions = [];
     backendAlive = false;
   }
 
@@ -86,7 +89,7 @@ BarWidget {
   readonly property bool opened: panelLoader.item ? panelLoader.item.opened === true : false
 
   function open() {
-    hadPending = pendings.length > 0;
+    hadPending = waitingCount > 0;
     refresh();
     if (panelLoader.item) panelLoader.item.open();
   }
@@ -97,7 +100,7 @@ BarWidget {
   }
 
   function togglePanel() {
-    if (pendingCount > 0) hadPending = true;
+    if (waitingCount > 0) hadPending = true;
     if (panelLoader.item) panelLoader.item.toggle();
     else root.open();
   }
@@ -111,9 +114,9 @@ BarWidget {
     if ("hostWidget" in target) target.hostWidget = root;
   }
 
-  // Auto-close: opened for permissions and they all resolved.
-  onPendingCountChanged: {
-    if (hadPending && pendingCount === 0) root.close();
+  // Auto-close: opened for waiting requests and they all resolved.
+  onWaitingCountChanged: {
+    if (hadPending && waitingCount === 0) root.close();
   }
 
   implicitWidth: button.implicitWidth
@@ -184,8 +187,8 @@ BarWidget {
         }
         Text {
           anchors.verticalCenter: parent.verticalCenter
-          visible: root.pendingCount > 0
-          text: root.pendingCount
+          visible: root.waitingCount > 0
+          text: root.waitingCount
           color: "#ffb224"
           font.pixelSize: Style.font.caption
         }

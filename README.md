@@ -15,12 +15,15 @@ mirrors it). Without Neko running, the widget shows a placeholder.
 
 ## What it shows
 
-- Dot: worst live state (amber = permission waiting, blue = working,
+- Dot: worst live state (amber = permission/question waiting, blue = working,
   green = done, red = error, grey = idle/offline).
-- Badge: number of pending permission requests.
-- Click: companion panel with sessions + Allow / Always / Deny buttons.
-  The panel auto-closes when permissions resolve. Replies run
-  `neko reply permission …` under the hood.
+- Badge: number of waiting requests (permissions + questions).
+- Click: companion panel with sessions, permission cards (Allow / Always /
+  Deny), and question cards (tap to answer, checkboxes + submit for
+  multi-select, dismiss). Replies run `neko reply …` under the hood, so the
+  `neko` binary must be on `PATH` (the `.deb` provides it; a dev symlink to
+  `target/debug/neko` works too).
+- The panel auto-closes when everything resolves.
 
 ## Status
 

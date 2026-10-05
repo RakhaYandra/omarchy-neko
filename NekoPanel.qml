@@ -22,6 +22,7 @@ Panel {
 
   property var sessions: []
   property var pendings: []
+  property var questions: []
   property bool backendAlive: false
   property string lastError: ""
 
@@ -65,12 +66,14 @@ Panel {
       if (v && Array.isArray(v.sessions)) {
         sessions = v.sessions;
         pendings = Array.isArray(v.pending) ? v.pending : [];
+        questions = Array.isArray(v.questions) ? v.questions : [];
         backendAlive = true;
         return;
       }
     } catch (e) {}
     sessions = [];
     pendings = [];
+    questions = [];
     backendAlive = false;
   }
 
@@ -95,6 +98,18 @@ Panel {
     replyProc.running = true;
   }
 
+  function answerQuestion(requestId, labels) {
+    lastError = "";
+    replyProc.command = ["neko", "reply", "question", requestId].concat(labels);
+    replyProc.running = true;
+  }
+
+  function rejectQuestion(requestId) {
+    lastError = "";
+    replyProc.command = ["neko", "reject", "question", requestId];
+    replyProc.running = true;
+  }
+
   implicitWidth: 320
   implicitHeight: content.implicitHeight + 20
 
@@ -104,7 +119,7 @@ Panel {
     watchChanges: true
     printErrors: false
     onLoaded: root.parseStatus(text())
-    onLoadFailed: { root.sessions = []; root.pendings = []; root.backendAlive = false; }
+    onLoadFailed: { root.sessions = []; root.pendings = []; root.questions = []; root.backendAlive = false; }
   }
 
   Timer {
@@ -215,6 +230,137 @@ Panel {
       color: "#f85149"
       font.pixelSize: 11
       wrapMode: Text.Wrap
+    }
+
+    Repeater {
+      model: root.questions
+      delegate: Rectangle {
+        property string reqId: modelData.requestId
+        property var item: (modelData.questions && modelData.questions.length > 0) ? modelData.questions[0] : null
+        property int extra: (modelData.questions ? modelData.questions.length : 0) - 1
+        property var picked: []
+        width: content.width
+        height: qCol.implicitHeight + 16
+        radius: 8
+        color: "rgba(88,166,255,0.08)"
+        border.width: 1
+        border.color: "#58a6ff"
+        Column {
+          id: qCol
+          anchors.fill: parent
+          anchors.margins: 8
+          spacing: 6
+          Text {
+            width: parent.width
+            text: "Question needs an answer"
+            color: "#fff"
+            font.pixelSize: 12
+            font.bold: true
+          }
+          Text {
+            width: parent.width
+            visible: item !== null
+            text: item ? ((item.header ? item.header + ": " : "") + item.question) : ""
+            color: "#fff"
+            font.pixelSize: 12
+            font.bold: true
+            wrapMode: Text.Wrap
+          }
+          Text {
+            width: parent.width
+            visible: item === null || extra > 0
+            text: item === null
+              ? "No options provided — answer in the terminal."
+              : (extra + 1) + " questions at once — answer in the terminal."
+            color: "#8b949e"
+            font.pixelSize: 11
+            wrapMode: Text.Wrap
+          }
+          Text {
+            width: parent.width
+            visible: item !== null && extra <= 0 && item.custom === true
+            text: "Free-text answers unsupported — pick an option or use the terminal."
+            color: "#8b949e"
+            font.pixelSize: 11
+            wrapMode: Text.Wrap
+          }
+          Repeater {
+            model: (item !== null && extra <= 0 && Array.isArray(item.options)) ? item.options : []
+            delegate: Rectangle {
+              property string optLabel: modelData.label
+              width: content.width
+              height: 26
+              radius: 6
+              color: picked.indexOf(optLabel) >= 0 ? "#1f6feb" : "rgba(255,255,255,0.06)"
+              border.width: 1
+              border.color: "#30363d"
+              Text {
+                anchors.centerIn: parent
+                text: optLabel
+                color: "#fff"
+                font.pixelSize: 12
+              }
+              MouseArea {
+                anchors.fill: parent
+                onClicked: {
+                  if (item.multiple === true) {
+                    var next = picked.slice();
+                    var at = next.indexOf(optLabel);
+                    if (at >= 0) next.splice(at, 1);
+                    else next.push(optLabel);
+                    picked = next;
+                  } else {
+                    root.answerQuestion(reqId, [optLabel]);
+                  }
+                }
+              }
+            }
+          }
+          Row {
+            spacing: 6
+            visible: item !== null && extra <= 0
+            Rectangle {
+              visible: item !== null && item.multiple === true
+              width: (content.width - 14) / 2
+              height: 28
+              radius: 6
+              color: "#1f6feb"
+              border.width: 1
+              border.color: "#30363d"
+              opacity: picked.length === 0 ? 0.5 : 1
+              Text {
+                anchors.centerIn: parent
+                text: "Answer"
+                color: "#fff"
+                font.pixelSize: 12
+                font.bold: true
+              }
+              MouseArea {
+                anchors.fill: parent
+                onClicked: { if (picked.length > 0) root.answerQuestion(reqId, picked); }
+              }
+            }
+            Rectangle {
+              width: (item !== null && item.multiple === true) ? (content.width - 14) / 2 : content.width - 12
+              height: 28
+              radius: 6
+              color: "rgba(248,81,73,0.25)"
+              border.width: 1
+              border.color: "#30363d"
+              Text {
+                anchors.centerIn: parent
+                text: "Dismiss"
+                color: "#fff"
+                font.pixelSize: 12
+              }
+              MouseArea {
+                anchors.fill: parent
+                onClicked: root.rejectQuestion(reqId)
+              }
+            }
+          }
+        }
+      }
     }
 
     Text {
