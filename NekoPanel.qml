@@ -65,7 +65,27 @@ Panel {
 
   onBucketRowsChanged: donut.requestPaint()
 
-  // Pose file for the worst live status (panel hero).
+  // HUD stream helpers (design tokens: JetBrains Mono, tabular ages).
+  function shortId(id) {
+    if (!id || id.length <= 18) return id || "";
+    return id.slice(0, 10) + "…" + id.slice(-6);
+  }
+
+  function ageOf(ts) {
+    var s = Math.max(0, Math.round((Date.now() - ts) / 1000));
+    if (s < 60) return s + "s";
+    var m = Math.floor(s / 60);
+    if (m < 60) return m + "m";
+    return Math.floor(m / 60) + "h";
+  }
+
+  function pillColor(status) {
+    if (status === "waiting_permission") return "#ffb224";
+    if (status === "error") return "#f85149";
+    if (status === "working" || status === "tool_running") return "#58a6ff";
+    if (status === "completed") return "#3fb950";
+    return "#8b949e";
+  }
   function heroPose() {
     if (!backendAlive || sessions.length === 0) return "idle";
     var rank = { error: 5, waiting_permission: 5, working: 4, tool_running: 4, completed: 2, idle: 1, disconnected: 0 };
@@ -235,7 +255,7 @@ Panel {
       width: parent.width
       Text {
         text: "Neko"
-        color: "#fff"
+        color: "#c9d1d9"
         font.pixelSize: 13
         font.bold: true
       }
@@ -268,7 +288,7 @@ Panel {
         spacing: 2
         Text {
           text: root.heroStat().big
-          color: "#fff"
+          color: "#c9d1d9"
           font.pixelSize: 26
           font.bold: true
         }
@@ -316,7 +336,7 @@ Panel {
         Text {
           anchors.centerIn: parent
           text: root.heroStat().big
-          color: "#fff"
+          color: "#c9d1d9"
           font.pixelSize: 18
           font.bold: true
         }
@@ -336,13 +356,13 @@ Panel {
             }
             Text {
               text: modelData.label
-              color: "#fff"
+              color: "#c9d1d9"
               font.pixelSize: 12
             }
             Item { width: 1; height: 1; Layout.fillWidth: true }
             Text {
               text: modelData.count
-              color: "#fff"
+              color: "#c9d1d9"
               font.pixelSize: 12
             }
           }
@@ -368,14 +388,14 @@ Panel {
           Text {
             width: parent.width
             text: "Permission requested"
-            color: "#fff"
+            color: "#c9d1d9"
             font.pixelSize: 12
             font.bold: true
           }
           Text {
             width: parent.width
             text: (modelData.action || "unknown") + (modelData.resource ? " " + modelData.resource : "")
-            color: "#fff"
+            color: "#c9d1d9"
             opacity: 0.85
             font.pixelSize: 11
             font.family: "monospace"
@@ -395,7 +415,7 @@ Panel {
                 Text {
                   anchors.centerIn: parent
                   text: modelData[1]
-                  color: "#fff"
+                  color: "#c9d1d9"
                   font.pixelSize: 12
                 }
                 MouseArea {
@@ -439,7 +459,7 @@ Panel {
           Text {
             width: parent.width
             text: "Question needs an answer"
-            color: "#fff"
+            color: "#c9d1d9"
             font.pixelSize: 12
             font.bold: true
           }
@@ -447,7 +467,7 @@ Panel {
             width: parent.width
             visible: item !== null
             text: item ? ((item.header ? item.header + ": " : "") + item.question) : ""
-            color: "#fff"
+            color: "#c9d1d9"
             font.pixelSize: 12
             font.bold: true
             wrapMode: Text.Wrap
@@ -483,7 +503,7 @@ Panel {
               Text {
                 anchors.centerIn: parent
                 text: optLabel
-                color: "#fff"
+                color: "#c9d1d9"
                 font.pixelSize: 12
               }
               MouseArea {
@@ -517,7 +537,7 @@ Panel {
               Text {
                 anchors.centerIn: parent
                 text: "Answer"
-                color: "#fff"
+                color: "#c9d1d9"
                 font.pixelSize: 12
                 font.bold: true
               }
@@ -536,7 +556,7 @@ Panel {
               Text {
                 anchors.centerIn: parent
                 text: "Dismiss"
-                color: "#fff"
+                color: "#c9d1d9"
                 font.pixelSize: 12
               }
               MouseArea {
@@ -576,16 +596,35 @@ Panel {
           font.pixelSize: 11
         }
         Text {
-          width: parent.width - 90
-          text: modelData.project || modelData.id
-          color: "#fff"
+          width: parent.width - 150
+          text: root.shortId(modelData.id)
+          color: "#c9d1d9"
           font.pixelSize: 11
+          font.family: "JetBrains Mono"
           elide: Text.ElideRight
         }
         Text {
-          text: root.statusLabels[modelData.status] || modelData.status
-          color: "#8b949e"
-          font.pixelSize: 11
+          text: root.ageOf(modelData.lastActivityAt)
+          color: "#6b7d91"
+          font.pixelSize: 10
+          font.family: "JetBrains Mono"
+        }
+        Item { width: 1; height: 1; Layout.fillWidth: true }
+        Rectangle {
+          height: 18
+          width: pillLabel.implicitWidth + 12
+          radius: 4
+          color: "transparent"
+          border.width: 1
+          border.color: root.pillColor(modelData.status)
+          Text {
+            id: pillLabel
+            anchors.centerIn: parent
+            text: root.statusLabels[modelData.status] || modelData.status
+            color: root.pillColor(modelData.status)
+            font.pixelSize: 9
+            font.bold: true
+          }
         }
       }
     }
