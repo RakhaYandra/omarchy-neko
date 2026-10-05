@@ -25,6 +25,9 @@ Panel {
   property var questions: []
   property bool backendAlive: false
   property string lastError: ""
+  // Donut data: [{label, color, count}] + total, rebuilt on every parse.
+  property var bucketRows: []
+  property int bucketTotal: 0
 
   readonly property var statusLabels: ({
     "disconnected": "Disconnected",
@@ -60,6 +63,59 @@ Panel {
     statusFile.reload();
   }
 
+  onBucketRowsChanged: donut.requestPaint()
+
+  // Pose file for the worst live status (panel hero).
+  function heroPose() {
+    if (!backendAlive || sessions.length === 0) return "idle";
+    var rank = { error: 5, waiting_permission: 5, working: 4, tool_running: 4, completed: 2, idle: 1, disconnected: 0 };
+    var best = "idle";
+    var bestRank = -1;
+    for (var i = 0; i < sessions.length; i++) {
+      var s = sessions[i].status;
+      var r = (s in rank) ? rank[s] : -1;
+      if (r > bestRank) { bestRank = r; best = s; }
+    }
+    if (pendings.length + questions.length > 0 && bestRank < 5
+        && (best === "working" || best === "tool_running" || best === "idle")) {
+      return "waiting_permission";
+    }
+    return (best === "waiting") ? "waiting_permission" : best;
+  }
+
+  function heroStat() {
+    var waiting = pendings.length + questions.length;
+    if (waiting > 0) return { big: String(waiting), sub: waiting === 1 ? "needs you" : "need you" };
+    if (sessions.length > 0) return { big: String(sessions.length), sub: sessions.length === 1 ? "session" : "sessions" };
+    return { big: "—", sub: "waiting for OpenCode" };
+  }
+
+  // Donut buckets from live sessions (counts, stable order/colors).
+  function rebuildBuckets() {
+    var defs = [
+      { key: "waiting_permission", label: "Needs you", color: "#ffb224" },
+      { key: "working", label: "Working", color: "#58a6ff" },
+      { key: "completed", label: "Done", color: "#3fb950" },
+      { key: "idle", label: "Idle", color: "#8b949e" },
+      { key: "error", label: "Error", color: "#f85149" }
+    ];
+    var counts = {};
+    for (var i = 0; i < sessions.length; i++) {
+      var s = sessions[i].status;
+      if (s === "tool_running") s = "working";
+      else if (s === "disconnected") s = "idle";
+      counts[s] = (counts[s] || 0) + 1;
+    }
+    var rows = [];
+    var total = 0;
+    for (var j = 0; j < defs.length; j++) {
+      var c = counts[defs[j].key] || 0;
+      if (c > 0) { rows.push({ label: defs[j].label, color: defs[j].color, count: c }); total += c; }
+    }
+    bucketRows = rows;
+    bucketTotal = total;
+  }
+
   function parseStatus(text) {
     try {
       var v = JSON.parse(text);
@@ -68,6 +124,7 @@ Panel {
         pendings = Array.isArray(v.pending) ? v.pending : [];
         questions = Array.isArray(v.questions) ? v.questions : [];
         backendAlive = true;
+        rebuildBuckets();
         return;
       }
     } catch (e) {}
@@ -75,6 +132,7 @@ Panel {
     pendings = [];
     questions = [];
     backendAlive = false;
+    rebuildBuckets();
   }
 
   function open() {
@@ -166,7 +224,9 @@ Panel {
 
       Column {
         id: contentColumn
-        width: parent.width - 20
+        // Explicit width (never parent-bound): parent chain sizes from us
+        // via fittedContentHeight, so parent.width here loops. Mirrors clock.
+        width: Style.space(340) - 20
         x: 10
         y: 10
         spacing: 8
@@ -192,6 +252,104 @@ Panel {
       }
     }
 
+    Row {
+      width: parent.width
+      spacing: 12
+      visible: root.backendAlive
+      Image {
+        source: "assets/neko-" + root.heroPose() + ".png"
+        width: 64
+        height: 64
+        smooth: false
+        mipmap: false
+        fillMode: Image.PreserveAspectFit
+      }
+      Column {
+        spacing: 2
+        Text {
+          text: root.heroStat().big
+          color: "#fff"
+          font.pixelSize: 26
+          font.bold: true
+        }
+        Text {
+          text: root.heroStat().sub
+          color: "#8b949e"
+          font.pixelSize: 11
+        }
+        Text {
+          text: Qt.formatDate(new Date(), "d MMM yyyy")
+          color: "#8b949e"
+          font.pixelSize: 11
+        }
+      }
+    }
+
+    Row {
+      width: parent.width
+      spacing: 12
+      visible: root.backendAlive && root.bucketTotal > 0
+      Item {
+        width: 120
+        height: 120
+        Canvas {
+          id: donut
+          anchors.fill: parent
+          onPaint: {
+            var ctx = getContext("2d");
+            ctx.clearRect(0, 0, width, height);
+            if (root.bucketTotal <= 0) return;
+            ctx.lineWidth = 14;
+            var cx = width / 2, cy = height / 2, r = width / 2 - 8;
+            var a0 = -Math.PI / 2;
+            for (var i = 0; i < root.bucketRows.length; i++) {
+              var frac = root.bucketRows[i].count / root.bucketTotal;
+              var a1 = a0 + frac * Math.PI * 2;
+              ctx.strokeStyle = root.bucketRows[i].color;
+              ctx.beginPath();
+              ctx.arc(cx, cy, r, a0, Math.max(a1, a0 + 0.02));
+              ctx.stroke();
+              a0 = a1;
+            }
+          }
+        }
+        Text {
+          anchors.centerIn: parent
+          text: root.heroStat().big
+          color: "#fff"
+          font.pixelSize: 18
+          font.bold: true
+        }
+      }
+      Column {
+        spacing: 6
+        Repeater {
+          model: root.bucketRows
+          delegate: Row {
+            width: contentColumn.width - 132
+            spacing: 8
+            Rectangle {
+              width: 7
+              height: 7
+              radius: 3.5
+              color: modelData.color
+            }
+            Text {
+              text: modelData.label
+              color: "#fff"
+              font.pixelSize: 12
+            }
+            Item { width: 1; height: 1; Layout.fillWidth: true }
+            Text {
+              text: modelData.count
+              color: "#fff"
+              font.pixelSize: 12
+            }
+          }
+        }
+      }
+    }
+
     Repeater {
       model: root.pendings
       delegate: Rectangle {
@@ -199,7 +357,7 @@ Panel {
         width: contentColumn.width
         height: cardCol.implicitHeight + 16
         radius: 8
-        color: "rgba(255,178,36,0.08)"
+        color: "#14ffb224"
         border.width: 1
         border.color: "#ffb224"
         Column {
@@ -226,7 +384,7 @@ Panel {
           Row {
             spacing: 6
             Repeater {
-              model: [["once", "Allow", "#1f6feb"], ["always", "Always", "rgba(255,255,255,0.08)"], ["deny", "Deny", "rgba(248,81,73,0.25)"]]
+              model: [["once", "Allow", "#1f6feb"], ["always", "Always", "#14ffffff"], ["deny", "Deny", "#40f85149"]]
               delegate: Rectangle {
                 width: (contentColumn.width - 28) / 3
                 height: 28
@@ -270,7 +428,7 @@ Panel {
         width: contentColumn.width
         height: qCol.implicitHeight + 16
         radius: 8
-        color: "rgba(88,166,255,0.08)"
+        color: "#1458a6ff"
         border.width: 1
         border.color: "#58a6ff"
         Column {
@@ -319,7 +477,7 @@ Panel {
               width: contentColumn.width
               height: 26
               radius: 6
-              color: picked.indexOf(optLabel) >= 0 ? "#1f6feb" : "rgba(255,255,255,0.06)"
+              color: picked.indexOf(optLabel) >= 0 ? "#1f6feb" : "#0fffffff"
               border.width: 1
               border.color: "#30363d"
               Text {
@@ -372,7 +530,7 @@ Panel {
               width: (item !== null && item.multiple === true) ? (contentColumn.width - 14) / 2 : contentColumn.width - 12
               height: 28
               radius: 6
-              color: "rgba(248,81,73,0.25)"
+              color: "#40f85149"
               border.width: 1
               border.color: "#30363d"
               Text {

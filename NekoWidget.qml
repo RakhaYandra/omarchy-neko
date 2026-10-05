@@ -52,11 +52,13 @@ BarWidget {
     } catch (e) {}
     return "/tmp/neko-status.json";
   }
+  readonly property bool panelReady: panelLoader.item !== null && panelLoader.item !== undefined
   readonly property string tooltipText: {
     if (!backendAlive) return "Neko — app not running";
-    if (waitingCount > 0) return "Neko — " + waitingCount + " request(s) waiting";
-    if (sessions.length === 0) return "Neko — waiting for OpenCode";
-    return "Neko — " + sessions.length + " session(s)";
+    var tag = panelReady ? "" : " [panel gagal load]";
+    if (waitingCount > 0) return "Neko — " + waitingCount + " request(s) waiting" + tag;
+    if (sessions.length === 0) return "Neko — waiting for OpenCode" + tag;
+    return "Neko — " + sessions.length + " session(s)" + tag;
   }
 
   function parseStatus(text) {
