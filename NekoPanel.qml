@@ -251,7 +251,8 @@ Panel {
       contentHeight: contentColumn.implicitHeight
       clip: true
       boundsBehavior: Flickable.StopAtBounds
-      interactive: contentHeight > height || contentWidth > width
+      interactive: contentHeight > height
+      flickableDirection: Flickable.VerticalFlick
 
       Column {
         id: contentColumn
@@ -262,20 +263,29 @@ Panel {
         y: 10
         spacing: 8
 
-    Row {
+    Item {
       width: parent.width
+      height: 24
       Text {
+        anchors.left: parent.left
+        anchors.verticalCenter: parent.verticalCenter
         text: "Neko"
         color: "#c9d1d9"
         font.pixelSize: 13
         font.bold: true
       }
-      Item { width: 1; height: 1; Layout.fillWidth: true }
-      // plain clickable close, primitives only (no shell button API assumed)
-      Text {
-        text: "✕"
-        color: "#8b949e"
-        font.pixelSize: 13
+      // close button, right side, 24px hit area
+      Item {
+        width: 24
+        height: 24
+        anchors.right: parent.right
+        anchors.verticalCenter: parent.verticalCenter
+        Text {
+          anchors.centerIn: parent
+          text: "✕"
+          color: "#8b949e"
+          font.pixelSize: 13
+        }
         MouseArea {
           anchors.fill: parent
           onClicked: root.close()
@@ -321,8 +331,8 @@ Panel {
       spacing: 12
       visible: root.backendAlive && root.bucketTotal > 0
       Item {
-        width: 120
-        height: 120
+        width: 88
+        height: 88
         Canvas {
           id: donut
           anchors.fill: parent
@@ -330,7 +340,7 @@ Panel {
             var ctx = getContext("2d");
             ctx.clearRect(0, 0, width, height);
             if (root.bucketTotal <= 0) return;
-            ctx.lineWidth = 14;
+            ctx.lineWidth = 10;
             var cx = width / 2, cy = height / 2, r = width / 2 - 8;
             var a0 = -Math.PI / 2;
             for (var i = 0; i < root.bucketRows.length; i++) {
@@ -356,22 +366,28 @@ Panel {
         spacing: 6
         Repeater {
           model: root.bucketRows
-          delegate: Row {
-            width: contentColumn.width - 132
-            spacing: 8
+          delegate: Item {
+            width: contentColumn.width - 100
+            height: 16
             Rectangle {
               width: 7
               height: 7
               radius: 3.5
               color: modelData.color
+              anchors.left: parent.left
+              anchors.verticalCenter: parent.verticalCenter
             }
             Text {
+              anchors.left: parent.left
+              anchors.leftMargin: 15
+              anchors.verticalCenter: parent.verticalCenter
               text: modelData.label
               color: "#c9d1d9"
               font.pixelSize: 12
             }
-            Item { width: 1; height: 1; Layout.fillWidth: true }
             Text {
+              anchors.right: parent.right
+              anchors.verticalCenter: parent.verticalCenter
               text: modelData.count
               color: "#c9d1d9"
               font.pixelSize: 12
@@ -606,17 +622,23 @@ Panel {
     }
 
     Repeater {
-      model: root.sessions.slice(0, 6)
-      delegate: Row {
+      model: root.sessions.slice(0, 4)
+      delegate: Item {
         width: contentColumn.width
-        spacing: 8
+        height: 18
         Text {
+          anchors.left: parent.left
+          anchors.verticalCenter: parent.verticalCenter
           text: "●"
           color: root.statusDot(modelData.status)
           font.pixelSize: 11
         }
         Text {
-          width: parent.width - 150
+          anchors.left: parent.left
+          anchors.leftMargin: 16
+          anchors.right: ageText.left
+          anchors.rightMargin: 8
+          anchors.verticalCenter: parent.verticalCenter
           text: root.shortId(modelData.id)
           color: "#c9d1d9"
           font.pixelSize: 11
@@ -624,13 +646,19 @@ Panel {
           elide: Text.ElideRight
         }
         Text {
+          id: ageText
+          anchors.right: pillBox.left
+          anchors.rightMargin: 8
+          anchors.verticalCenter: parent.verticalCenter
           text: root.ageOf(modelData.lastActivityAt)
           color: "#6b7d91"
           font.pixelSize: 10
           font.family: "JetBrains Mono"
         }
-        Item { width: 1; height: 1; Layout.fillWidth: true }
         Rectangle {
+          id: pillBox
+          anchors.right: parent.right
+          anchors.verticalCenter: parent.verticalCenter
           height: 18
           width: pillLabel.implicitWidth + 12
           radius: 4
@@ -650,38 +678,44 @@ Panel {
     }
 
     Text {
-      visible: root.backendAlive && root.sessions.length > 6
+      visible: root.backendAlive && root.sessions.length > 4
       width: parent.width
-      text: "+" + (root.sessions.length - 6) + " more — full list in the Neko window"
+      text: "+" + (root.sessions.length - 4) + " more — full list in the Neko window"
       color: "#6b7d91"
       font.pixelSize: 10
     }
 
-    Row {
+    Item {
       width: parent.width
-      spacing: 8
+      height: 18
       Text {
+        anchors.left: parent.left
+        anchors.verticalCenter: parent.verticalCenter
         text: "● Live"
         color: "#3fb950"
         font.pixelSize: 10
       }
-      Item { width: 1; height: 1; Layout.fillWidth: true }
-      Text {
-        text: "Clear"
-        color: "#8b949e"
-        font.pixelSize: 10
-        MouseArea {
-          anchors.fill: parent
-          onClicked: root.clearDone()
+      Row {
+        anchors.right: parent.right
+        anchors.verticalCenter: parent.verticalCenter
+        spacing: 12
+        Text {
+          text: "Clear"
+          color: "#8b949e"
+          font.pixelSize: 10
+          MouseArea {
+            anchors.fill: parent
+            onClicked: root.clearDone()
+          }
         }
-      }
-      Text {
-        text: "Export"
-        color: "#8b949e"
-        font.pixelSize: 10
-        MouseArea {
-          anchors.fill: parent
-          onClicked: root.exportLog()
+        Text {
+          text: "Export"
+          color: "#8b949e"
+          font.pixelSize: 10
+          MouseArea {
+            anchors.fill: parent
+            onClicked: root.exportLog()
+          }
         }
       }
     }
