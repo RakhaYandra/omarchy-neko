@@ -246,6 +246,7 @@ Panel {
     // its children, never anchors.fill (that collapses to zero height
     // against the fitted popup and renders nothing).
     Flickable {
+      id: scroller
       anchors.fill: parent
       contentWidth: contentColumn.width
       contentHeight: contentColumn.implicitHeight
@@ -256,9 +257,9 @@ Panel {
 
       Column {
         id: contentColumn
-        // Explicit width (never parent-bound): parent chain sizes from us
-        // via fittedContentHeight, so parent.width here loops. Mirrors clock.
-        width: Style.space(340) - 20
+        // Viewport-driven width (never a constant, never parent-bound):
+        // always exactly fits, regardless of popup padding. Mirrors clock.
+        width: scroller.width - 20
         x: 10
         y: 10
         spacing: 8
@@ -660,7 +661,7 @@ Panel {
           anchors.right: parent.right
           anchors.verticalCenter: parent.verticalCenter
           height: 18
-          width: pillLabel.implicitWidth + 12
+          width: 78
           radius: 4
           color: "transparent"
           border.width: 1
