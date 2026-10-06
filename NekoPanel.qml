@@ -25,6 +25,7 @@ Panel {
   property var questions: []
   property bool backendAlive: false
   property string lastError: ""
+  property string lastExportPath: ""
   // Donut data: [{label, color, count}] + total, rebuilt on every parse.
   property var bucketRows: []
   property int bucketTotal: 0
@@ -143,6 +144,7 @@ Panel {
         sessions = v.sessions;
         pendings = Array.isArray(v.pending) ? v.pending : [];
         questions = Array.isArray(v.questions) ? v.questions : [];
+        lastExportPath = (typeof v.lastExport === "string") ? v.lastExport : "";
         backendAlive = true;
         rebuildBuckets();
         return;
@@ -151,6 +153,7 @@ Panel {
     sessions = [];
     pendings = [];
     questions = [];
+    lastExportPath = "";
     backendAlive = false;
     rebuildBuckets();
   }
@@ -170,22 +173,30 @@ Panel {
     else root.open();
   }
 
-  function answer(requestId, decision) {
+  function runCmd(args) {
     lastError = "";
-    replyProc.command = ["neko", "reply", "permission", requestId, decision];
+    replyProc.command = args;
     replyProc.running = true;
+  }
+
+  function answer(requestId, decision) {
+    runCmd(["neko", "reply", "permission", requestId, decision]);
   }
 
   function answerQuestion(requestId, labels) {
-    lastError = "";
-    replyProc.command = ["neko", "reply", "question", requestId].concat(labels);
-    replyProc.running = true;
+    runCmd(["neko", "reply", "question", requestId].concat(labels));
   }
 
   function rejectQuestion(requestId) {
-    lastError = "";
-    replyProc.command = ["neko", "reject", "question", requestId];
-    replyProc.running = true;
+    runCmd(["neko", "reject", "question", requestId]);
+  }
+
+  function clearDone() {
+    runCmd(["neko", "clear"]);
+  }
+
+  function exportLog() {
+    runCmd(["neko", "export"]);
   }
 
   FileView {
@@ -194,7 +205,7 @@ Panel {
     watchChanges: true
     printErrors: false
     onLoaded: root.parseStatus(text())
-    onLoadFailed: { root.sessions = []; root.pendings = []; root.questions = []; root.backendAlive = false; }
+    onLoadFailed: { root.sessions = []; root.pendings = []; root.questions = []; root.lastExportPath = ""; root.backendAlive = false; }
   }
 
   Timer {
@@ -208,7 +219,7 @@ Panel {
   Process {
     id: replyProc
     onExited: function(code) {
-      if (code !== 0) root.lastError = "reply failed — is Neko installed and running?";
+      if (code !== 0) root.lastError = "command failed — is Neko installed and running?";
     }
   }
 
@@ -585,8 +596,17 @@ Panel {
       font.pixelSize: 11
     }
 
+    Text {
+      visible: root.backendAlive && root.sessions.length > 0
+      width: parent.width
+      text: "SESSION STREAM"
+      color: "#c9d1d9"
+      font.pixelSize: 11
+      font.bold: true
+    }
+
     Repeater {
-      model: root.sessions
+      model: root.sessions.slice(0, 6)
       delegate: Row {
         width: contentColumn.width
         spacing: 8
@@ -627,6 +647,52 @@ Panel {
           }
         }
       }
+    }
+
+    Text {
+      visible: root.backendAlive && root.sessions.length > 6
+      width: parent.width
+      text: "+" + (root.sessions.length - 6) + " more — full list in the Neko window"
+      color: "#6b7d91"
+      font.pixelSize: 10
+    }
+
+    Row {
+      width: parent.width
+      spacing: 8
+      Text {
+        text: "● Live"
+        color: "#3fb950"
+        font.pixelSize: 10
+      }
+      Item { width: 1; height: 1; Layout.fillWidth: true }
+      Text {
+        text: "Clear"
+        color: "#8b949e"
+        font.pixelSize: 10
+        MouseArea {
+          anchors.fill: parent
+          onClicked: root.clearDone()
+        }
+      }
+      Text {
+        text: "Export"
+        color: "#8b949e"
+        font.pixelSize: 10
+        MouseArea {
+          anchors.fill: parent
+          onClicked: root.exportLog()
+        }
+      }
+    }
+
+    Text {
+      visible: root.lastExportPath !== ""
+      width: parent.width
+      text: "Exported " + root.lastExportPath.split("/").pop()
+      color: "#6b7d91"
+      font.pixelSize: 10
+      elide: Text.ElideMiddle
     }
   }
   }
