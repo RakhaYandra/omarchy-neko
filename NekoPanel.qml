@@ -233,7 +233,7 @@ Panel {
     open: root.opened
     centerOnBar: true
     focusTarget: keyCatcher
-    contentWidth: panel.fittedContentWidth(Style.space(340))
+    contentWidth: panel.fittedContentWidth(Style.space(420))
     contentHeight: panel.fittedContentHeight(contentColumn.implicitHeight + 20)
 
     PanelKeyCatcher {
@@ -257,25 +257,33 @@ Panel {
         id: contentColumn
         // Explicit width (never parent-bound): parent chain sizes from us
         // via fittedContentHeight, so parent.width here loops. Mirrors clock.
-        width: Style.space(340) - 20
+        width: Style.space(420) - 20
         x: 10
         y: 10
         spacing: 8
 
-    Row {
+    RowLayout {
       width: parent.width
+      spacing: 8
       Text {
         text: "Neko"
         color: "#c9d1d9"
         font.pixelSize: 13
         font.bold: true
+        Layout.alignment: Qt.AlignVCenter
       }
-      Item { width: 1; height: 1; Layout.fillWidth: true }
-      // plain clickable close, primitives only (no shell button API assumed)
-      Text {
-        text: "✕"
-        color: "#8b949e"
-        font.pixelSize: 13
+      Item { Layout.fillWidth: true }
+      // close button, right side, 24px hit area
+      Item {
+        width: 24
+        height: 24
+        Layout.alignment: Qt.AlignVCenter
+        Text {
+          anchors.centerIn: parent
+          text: "✕"
+          color: "#8b949e"
+          font.pixelSize: 13
+        }
         MouseArea {
           anchors.fill: parent
           onClicked: root.close()
@@ -283,7 +291,7 @@ Panel {
       }
     }
 
-    Row {
+    RowLayout {
       width: parent.width
       spacing: 12
       visible: root.backendAlive
@@ -294,9 +302,12 @@ Panel {
         smooth: false
         mipmap: false
         fillMode: Image.PreserveAspectFit
+        Layout.alignment: Qt.AlignVCenter
       }
       Column {
         spacing: 2
+        Layout.alignment: Qt.AlignVCenter
+        Layout.fillWidth: true
         Text {
           text: root.heroStat().big
           color: "#c9d1d9"
@@ -316,13 +327,14 @@ Panel {
       }
     }
 
-    Row {
+    RowLayout {
       width: parent.width
       spacing: 12
       visible: root.backendAlive && root.bucketTotal > 0
       Item {
         width: 120
         height: 120
+        Layout.alignment: Qt.AlignVCenter
         Canvas {
           id: donut
           anchors.fill: parent
@@ -354,27 +366,32 @@ Panel {
       }
       Column {
         spacing: 6
+        Layout.fillWidth: true
+        Layout.alignment: Qt.AlignVCenter
         Repeater {
           model: root.bucketRows
-          delegate: Row {
-            width: contentColumn.width - 132
+          delegate: RowLayout {
+            width: parent.width
             spacing: 8
             Rectangle {
               width: 7
               height: 7
               radius: 3.5
               color: modelData.color
+              Layout.alignment: Qt.AlignVCenter
             }
             Text {
               text: modelData.label
               color: "#c9d1d9"
               font.pixelSize: 12
+              Layout.alignment: Qt.AlignVCenter
             }
-            Item { width: 1; height: 1; Layout.fillWidth: true }
+            Item { Layout.fillWidth: true }
             Text {
               text: modelData.count
               color: "#c9d1d9"
               font.pixelSize: 12
+              Layout.alignment: Qt.AlignVCenter
             }
           }
         }
@@ -606,30 +623,32 @@ Panel {
     }
 
     Repeater {
-      model: root.sessions.slice(0, 6)
-      delegate: Row {
+      model: root.sessions.slice(0, 4)
+      delegate: RowLayout {
         width: contentColumn.width
         spacing: 8
         Text {
           text: "●"
           color: root.statusDot(modelData.status)
           font.pixelSize: 11
+          Layout.alignment: Qt.AlignVCenter
         }
         Text {
-          width: parent.width - 150
           text: root.shortId(modelData.id)
           color: "#c9d1d9"
           font.pixelSize: 11
           font.family: "JetBrains Mono"
           elide: Text.ElideRight
+          Layout.fillWidth: true
+          Layout.alignment: Qt.AlignVCenter
         }
         Text {
           text: root.ageOf(modelData.lastActivityAt)
           color: "#6b7d91"
           font.pixelSize: 10
           font.family: "JetBrains Mono"
+          Layout.alignment: Qt.AlignVCenter
         }
-        Item { width: 1; height: 1; Layout.fillWidth: true }
         Rectangle {
           height: 18
           width: pillLabel.implicitWidth + 12
@@ -650,26 +669,28 @@ Panel {
     }
 
     Text {
-      visible: root.backendAlive && root.sessions.length > 6
+      visible: root.backendAlive && root.sessions.length > 4
       width: parent.width
-      text: "+" + (root.sessions.length - 6) + " more — full list in the Neko window"
+      text: "+" + (root.sessions.length - 4) + " more — full list in the Neko window"
       color: "#6b7d91"
       font.pixelSize: 10
     }
 
-    Row {
+    RowLayout {
       width: parent.width
-      spacing: 8
+      spacing: 12
       Text {
         text: "● Live"
         color: "#3fb950"
         font.pixelSize: 10
+        Layout.alignment: Qt.AlignVCenter
       }
-      Item { width: 1; height: 1; Layout.fillWidth: true }
+      Item { Layout.fillWidth: true }
       Text {
         text: "Clear"
         color: "#8b949e"
         font.pixelSize: 10
+        Layout.alignment: Qt.AlignVCenter
         MouseArea {
           anchors.fill: parent
           onClicked: root.clearDone()
@@ -679,6 +700,7 @@ Panel {
         text: "Export"
         color: "#8b949e"
         font.pixelSize: 10
+        Layout.alignment: Qt.AlignVCenter
         MouseArea {
           anchors.fill: parent
           onClicked: root.exportLog()
