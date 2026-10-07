@@ -25,7 +25,6 @@ Panel {
   property var questions: []
   property bool backendAlive: false
   property string lastError: ""
-  property string lastExportPath: ""
   // Donut data: [{label, color, count}] + total, rebuilt on every parse.
   property var bucketRows: []
   property int bucketTotal: 0
@@ -144,7 +143,6 @@ Panel {
         sessions = v.sessions;
         pendings = Array.isArray(v.pending) ? v.pending : [];
         questions = Array.isArray(v.questions) ? v.questions : [];
-        lastExportPath = (typeof v.lastExport === "string") ? v.lastExport : "";
         backendAlive = true;
         rebuildBuckets();
         return;
@@ -153,7 +151,6 @@ Panel {
     sessions = [];
     pendings = [];
     questions = [];
-    lastExportPath = "";
     backendAlive = false;
     rebuildBuckets();
   }
@@ -191,21 +188,13 @@ Panel {
     runCmd(["neko", "reject", "question", requestId]);
   }
 
-  function clearDone() {
-    runCmd(["neko", "clear"]);
-  }
-
-  function exportLog() {
-    runCmd(["neko", "export"]);
-  }
-
   FileView {
     id: statusFile
     path: root.statusPath()
     watchChanges: true
     printErrors: false
     onLoaded: root.parseStatus(text())
-    onLoadFailed: { root.sessions = []; root.pendings = []; root.questions = []; root.lastExportPath = ""; root.backendAlive = false; }
+    onLoadFailed: { root.sessions = []; root.pendings = []; root.questions = []; root.backendAlive = false; }
   }
 
   Timer {
@@ -696,39 +685,8 @@ Panel {
         color: "#3fb950"
         font.pixelSize: 10
       }
-      Row {
-        anchors.right: parent.right
-        anchors.verticalCenter: parent.verticalCenter
-        spacing: 12
-        Text {
-          text: "Clear"
-          color: "#8b949e"
-          font.pixelSize: 10
-          MouseArea {
-            anchors.fill: parent
-            onClicked: root.clearDone()
-          }
-        }
-        Text {
-          text: "Export"
-          color: "#8b949e"
-          font.pixelSize: 10
-          MouseArea {
-            anchors.fill: parent
-            onClicked: root.exportLog()
-          }
-        }
-      }
     }
 
-    Text {
-      visible: root.lastExportPath !== ""
-      width: parent.width
-      text: "Exported " + root.lastExportPath.split("/").pop()
-      color: "#6b7d91"
-      font.pixelSize: 10
-      elide: Text.ElideMiddle
-    }
   }
   }
 }
