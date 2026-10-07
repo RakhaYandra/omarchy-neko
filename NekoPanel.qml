@@ -353,6 +353,9 @@ Panel {
         }
       }
       Column {
+        // Vertically centered against the 88px donut (explicit offset:
+        // anchors don't apply to positioner children).
+        y: (88 - implicitHeight) / 2
         spacing: 6
         Repeater {
           model: root.bucketRows
